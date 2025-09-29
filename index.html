@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Học Tiếng Trung - HSK Flashcard & Từ Điển</title>
+    <!-- Tải Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #10B981; /* Emerald 500 */
+            --secondary-color: #059669; /* Emerald 600 */
+            --accent-color: #3B82F6; /* Blue 500 */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F3F4F6;
+        }
+        /* Dashboard Card Link Style */
+        .card-link {
+            padding: 2.5rem 1.5rem;
+            border-radius: 1rem;
+            cursor: pointer;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .card-link:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Flashcard styles */
+        .flashcard-container { perspective: 1000px; }
+        .flashcard {
+            transition: transform 0.8s;
+            transform-style: preserve-3d;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .flashcard.flipped { transform: rotateY(180deg); }
+        .flashcard-face {
+            backface-visibility: hidden;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            text-align: center;
+        }
+        .flashcard-back { transform: rotateY(180deg); }
+
+        /* Style cho thanh tab đang active (trong chi tiết từ vựng) */
+        .tab-active {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+        }
+        /* Scrollbar styling for better look */
+        .hsk-list-container::-webkit-scrollbar { width: 6px; }
+        .hsk-list-container::-webkit-scrollbar-thumb {
+            background-color: var(--primary-color);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <div id="app" class="max-w-4xl mx-auto p-4 md:p-6">
+        <header class="text-center py-6 bg-white rounded-xl shadow-lg mb-6">
+            <h1 class="text-3xl font-extrabold text-gray-800">📚 Ứng Dụng Học Tiếng Trung</h1>
+            <p class="text-gray-500 mt-1">Nắm vững Hán ngữ với Flashcard và Từ điển HSK</p>
+        </header>
+
+        <!-- Nút Quay Lại (Chỉ hiển thị trong các giao diện chi tiết) -->
+        <button id="back-button" onclick="showView('dashboard')" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg mb-4 transition duration-200 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            Quay Lại Trang Chủ
+        </button>
+
+
+        <main class="mt-6">
+            <!-- 0. Giao diện DASHBOARD (Trang Chủ) -->
+            <section id="view-dashboard" class="view-content">
+                <h2 class="text-2xl font-bold mb-6 text-gray-700">Chọn Chức Năng</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <!-- Card 1: Từ Vựng & Từ Điển (Gồm 3 phần cũ) -->
+                    <div onclick="showDetailView('vocab')" class="card-link bg-primary-color text-white shadow-xl hover:shadow-2xl">
+                        <p>📖 Từ Vựng & Từ Điển</p>
+                        <p class="text-sm font-normal mt-1 opacity-80">Flashcard, Danh mục HSK</p>
+                    </div>
+
+                    <!-- Card 2: Ngữ Pháp HSK -->
+                    <div onclick="showDetailView('grammar')" class="card-link bg-accent-color text-white shadow-xl hover:shadow-2xl">
+                        <p>📝 Ngữ Pháp HSK</p>
+                        <p class="text-sm font-normal mt-1 opacity-80">Các điểm ngữ pháp theo từng cấp độ</p>
+                    </div>
+
+                    <!-- Card 3: Bài Tập Kiểm Tra -->
+                    <div onclick="showDetailView('quiz')" class="card-link bg-red-500 text-white shadow-xl hover:shadow-2xl">
+                        <p>✅ Bài Tập Kiểm Tra</p>
+                        <p class="text-sm font-normal mt-1 opacity-80">Luyện tập trắc nghiệm</p>
+                    </div>
+
+                    <!-- Card 4: Luyện Nghe -->
+                    <div onclick="showDetailView('listening')" class="card-link bg-yellow-600 text-white shadow-xl hover:shadow-2xl">
+                        <p>🎧 Luyện Nghe</p>
+                        <p class="text-sm font-normal mt-1 opacity-80">Nghe và điền từ</p>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- 1. Giao diện CHI TIẾT TỪ VỰNG (Kết hợp 3 tab cũ) -->
+            <section id="view-vocab" class="view-content hidden">
+                <nav class="bg-white p-2 rounded-xl shadow-md flex justify-around mb-6 sticky top-0 z-10">
+                    <button id="tab-hsk" onclick="changeSubTab('hsk')" class="p-3 text-gray-600 font-semibold transition duration-200 hover:text-gray-900 tab-active">
+                        Danh Mục HSK
+                    </button>
+                    <button id="tab-flashcard" onclick="changeSubTab('flashcard')" class="p-3 text-gray-600 font-semibold transition duration-200 hover:text-gray-900">
+                        Flashcard Từ Vựng
+                    </button>
+                    <button id="tab-dictionary" onclick="changeSubTab('dictionary')" class="p-3 text-gray-600 font-semibold transition duration-200 hover:text-gray-900">
+                        Từ Điển
+                    </button>
+                </nav>
+                
+                <div id="vocab-sub-content">
+                    <!-- Nội dung Danh Mục HSK -->
+                    <div id="sub-view-hsk" class="sub-tab-content bg-white p-6 rounded-xl shadow-md">
+                        <h2 class="text-2xl font-bold mb-4 text-gray-700 border-b pb-2">Danh Mục Từ Mới Theo HSK</h2>
+                        <div id="hsk-list-content" class="hsk-list-container max-h-[70vh] overflow-y-auto pr-2"></div>
+                    </div>
+
+                    <!-- Nội dung Flashcard -->
+                    <div id="sub-view-flashcard" class="sub-tab-content hidden">
+                        <div class="flex flex-col items-center bg-white p-6 rounded-xl shadow-md">
+                            <h2 class="text-2xl font-bold mb-6 text-gray-700">Ôn Tập Flashcard</h2>
+                            <!-- Flashcard Card Block -->
+                            <div id="flashcard-container" class="flashcard-container w-full max-w-sm h-64 mb-8">
+                                <div id="flashcard" class="flashcard h-full w-full cursor-pointer" onclick="flipCard()">
+                                    <!-- Mặt trước (Front) -->
+                                    <div id="card-front" class="flashcard-face flashcard-front bg-white border-4 border-primary-color text-gray-800">
+                                        <p class="text-6xl font-black mb-4" id="card-hanzi"></p>
+                                        <p class="text-2xl font-medium text-accent-color" id="card-pinyin"></p>
+                                        <span class="absolute bottom-4 text-sm text-gray-400">Chạm để xem nghĩa</span>
+                                    </div>
+                                    <!-- Mặt sau (Back) -->
+                                    <div id="card-back" class="flashcard-face flashcard-back bg-primary-color text-white">
+                                        <p class="text-4xl font-bold mb-2" id="card-meaning"></p>
+                                        <p class="text-lg opacity-80" id="card-type"></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Nút điều hướng Flashcard -->
+                            <div class="flex space-x-4">
+                                <button onclick="prevCard()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-6 rounded-full transition duration-300 shadow-lg flex items-center">Trước</button>
+                                <button onclick="nextCard()" class="bg-secondary-color hover:bg-primary-color text-white font-bold py-3 px-6 rounded-full transition duration-300 shadow-lg flex items-center">Tiếp theo</button>
+                            </div>
+                            <p id="card-status" class="mt-4 text-sm text-gray-500"></p>
+                        </div>
+                    </div>
+
+                    <!-- Nội dung Từ điển -->
+                    <div id="sub-view-dictionary" class="sub-tab-content hidden bg-white p-6 rounded-xl shadow-md">
+                        <h2 class="text-2xl font-bold mb-4 text-gray-700 border-b pb-2">Từ Điển Tra Cứu Nhanh</h2>
+                        <div class="mb-4">
+                            <input type="text" id="search-input" oninput="searchDictionary()" placeholder="Nhập Hán tự, Pinyin, hoặc Nghĩa tiếng Việt..."
+                                class="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-accent-color transition duration-200">
+                        </div>
+                        <div id="search-results" class="max-h-[60vh] overflow-y-auto pr-2">
+                            <p class="text-gray-500 text-center mt-8">Bắt đầu nhập để tra cứu từ vựng.</p>
+                        </div>
+                        <p id="search-status" class="text-sm text-gray-500 mt-2"></p>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- 2. Giao diện CHI TIẾT NGỮ PHÁP HSK -->
+            <section id="view-grammar" class="view-content hidden bg-white p-6 rounded-xl shadow-md">
+                <h2 class="text-2xl font-bold mb-4 text-gray-700 border-b pb-2">📝 Ngữ Pháp Tiếng Trung Theo HSK</h2>
+                <div id="grammar-content">
+                    <!-- Ngữ pháp sẽ được render tại đây -->
+                </div>
+            </section>
+
+
+            <!-- 3. Giao diện CHI TIẾT BÀI TẬP KIỂM TRA -->
+            <section id="view-quiz" class="view-content hidden bg-white p-6 rounded-xl shadow-md">
+                <h2 class="text-2xl font-bold mb-4 text-gray-700 border-b pb-2">✅ Bài Tập Kiểm Tra</h2>
+                <div class="text-center py-12">
+                    <p class="text-xl font-semibold text-accent-color mb-4">Mô đun Bài Tập Đang Được Phát Triển!</p>
+                    <p class="text-gray-600 max-w-lg mx-auto">Trong bản cập nhật tiếp theo, chúng tôi sẽ bổ sung các bài kiểm tra trắc nghiệm theo từng cấp độ HSK để bạn có thể tự đánh giá kiến thức.</p>
+                    <button onclick="showView('vocab')" class="mt-6 bg-secondary-color hover:bg-primary-color text-white font-bold py-2 px-4 rounded-full transition duration-300">
+                        Ôn Luyện Từ Vựng Ngay
+                    </button>
+                </div>
+            </section>
+
+
+            <!-- 4. Giao diện CHI TIẾT LUYỆN NGHE -->
+            <section id="view-listening" class="view-content hidden bg-white p-6 rounded-xl shadow-md">
+                <h2 class="text-2xl font-bold mb-4 text-gray-700 border-b pb-2">🎧 Luyện Nghe Hán Ngữ</h2>
+                <div class="text-center py-12">
+                    <p class="text-xl font-semibold text-yellow-600 mb-4">Mô đun Luyện Nghe Đang Được Xây Dựng!</p>
+                    <p class="text-gray-600 max-w-lg mx-auto">Chúng tôi sẽ sớm tích hợp các đoạn hội thoại ngắn, bài nghe HSK và chức năng điền từ để giúp bạn cải thiện kỹ năng nghe.</p>
+                    <p class="text-gray-400 mt-4"> (Tính năng này yêu cầu tích hợp API âm thanh Tone.js hoặc các dịch vụ TTS)</p>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        // --- DỮ LIỆU TỪ VỰNG ---
+        const HSK_VOCABULARY_DATA = {
+            "HSK 1": [
+                { hanzi: "你好", pinyin: "nǐ hǎo", meaning: "Xin chào", type: "Lời chào" },
+                { hanzi: "谢谢", pinyin: "xiè xie", meaning: "Cảm ơn", type: "Cảm ơn" },
+                { hanzi: "不客气", pinyin: "bú kè qi", meaning: "Không có gì", type: "Đáp lại" },
+                { hanzi: "再见", pinyin: "zài jiàn", meaning: "Tạm biệt", type: "Lời chào" },
+                { hanzi: "对不起", pinyin: "duì bù qǐ", meaning: "Xin lỗi", type: "Xin lỗi" },
+                { hanzi: "没关系", pinyin: "méi guān xi", meaning: "Không sao", type: "Đáp lại" },
+                { hanzi: "是", pinyin: "shì", meaning: "Là, phải", type: "Động từ" },
+                { hanzi: "不", pinyin: "bù", meaning: "Không", type: "Phó từ" },
+                { hanzi: "我", pinyin: "wǒ", meaning: "Tôi, tớ", type: "Đại từ" },
+                { hanzi: "你", pinyin: "nǐ", meaning: "Bạn, cậu", type: "Đại từ" },
+            ],
+            "HSK 2": [
+                { hanzi: "多少", pinyin: "duō shǎo", meaning: "Bao nhiêu", type: "Đại từ" },
+                { hanzi: "钱", pinyin: "qián", meaning: "Tiền", type: "Danh từ" },
+                { hanzi: "商店", pinyin: "shāng diàn", meaning: "Cửa hàng", type: "Danh từ" },
+                { hanzi: "买", pinyin: "mǎi", meaning: "Mua", type: "Động từ" },
+                { hanzi: "可以", pinyin: "kě yǐ", meaning: "Có thể, được phép", type: "Động từ năng nguyện" },
+                { hanzi: "东西", pinyin: "dōng xi", meaning: "Đồ đạc", type: "Danh từ" },
+            ],
+            "HSK 3": [
+                { hanzi: "妻子", pinyin: "qī zi", meaning: "Vợ", type: "Danh từ" },
+                { hanzi: "丈夫", pinyin: "zhàng fu", meaning: "Chồng", type: "Danh từ" },
+                { hanzi: "旅游", pinyin: "lǚ yóu", meaning: "Du lịch", type: "Động từ/Danh từ" },
+                { hanzi: "觉得", pinyin: "jué de", meaning: "Cảm thấy", type: "Động từ" },
+            ],
+        };
+
+        // --- DỮ LIỆU NGỮ PHÁP MOCK ---
+        const HSK_GRAMMAR_DATA = {
+            "HSK 1": [
+                { title: "Câu trần thuật cơ bản", structure: "S + V + O", example: "我 是 学生 (Wǒ shì xuésheng).", notes: "Sử dụng động từ 是 (shì) để giới thiệu." },
+                { title: "Câu hỏi với 吗", structure: "Câu trần thuật + 吗?", example: "你 好 吗? (Nǐ hǎo ma?)", notes: "Dùng 吗 (ma) ở cuối câu để tạo câu hỏi nghi vấn." },
+                { title: "Phó từ phủ định 不", structure: "不 + V/A", example: "我 不 吃 饭 (Wǒ bù chī fàn).", notes: "不 (bù) đứng trước động từ hoặc tính từ." },
+            ],
+            "HSK 2": [
+                { title: "Biểu thị địa điểm với 在", structure: "S + 在 + Địa điểm", example: "他 在 商店 (Tā zài shāngdiàn).", notes: "Diễn tả sự vật, người đang ở đâu." },
+                { title: "Trợ từ động thái 了", structure: "V + 了 + O", example: "我 吃饭 了 (Wǒ chīfàn le).", notes: "Biểu thị hành động đã hoàn thành." },
+                { title: "So sánh với 比", structure: "A + 比 + B + Adj", example: "今天 比 昨天 冷 (Jīntiān bǐ zuótiān lěng).", notes: "Dùng để so sánh hai đối tượng." },
+            ],
+            "HSK 3": [
+                { title: "Bổ ngữ trình thái (得)", structure: "V + 得 + Adverb/Adj", example: "他 说得 很 好 (Tā shuō de hěn hǎo).", notes: "Mô tả kết quả hoặc trạng thái của hành động." },
+                { title: "Câu chữ 把", structure: "S + 把 + O + V + Phần khác", example: "你 把 钱 给 我 (Nǐ bǎ qián gěi wǒ).", notes: "Nhấn mạnh sự sắp xếp, xử lý đối tượng." },
+            ]
+        };
+        
+        // Gộp tất cả từ vựng cho Flashcard và Từ điển
+        let allVocabulary = [];
+        Object.values(HSK_VOCABULARY_DATA).forEach(list => {
+            allVocabulary.push(...list);
+        });
+
+        // --- Logic Chuyển View Tổng Thể ---
+        const views = document.querySelectorAll('.view-content');
+        const backButton = document.getElementById('back-button');
+
+        function showView(viewName) {
+            views.forEach(view => {
+                view.classList.add('hidden');
+            });
+
+            document.getElementById(`view-${viewName}`).classList.remove('hidden');
+            
+            // Xử lý nút Quay Lại
+            if (viewName !== 'dashboard') {
+                backButton.classList.remove('hidden');
+            } else {
+                backButton.classList.add('hidden');
+            }
+        }
+
+        function showDetailView(detailType) {
+            showView(detailType); // Chuyển sang view chi tiết (vocab, grammar, quiz, listening)
+
+            if (detailType === 'vocab') {
+                // Mặc định tab đầu tiên trong view vocab là HSK List
+                changeSubTab('hsk'); 
+            } else if (detailType === 'grammar') {
+                renderGrammarLists();
+            }
+            // Các view khác (quiz, listening) chỉ có giao diện chờ nên không cần render
+        }
+
+
+        // --- Logic Chuyển Sub-Tab (Chỉ áp dụng trong view-vocab) ---
+        let activeSubTab = 'hsk';
+        function changeSubTab(tabName) {
+            activeSubTab = tabName;
+
+            const subContents = document.querySelectorAll('.sub-tab-content');
+            subContents.forEach(content => {
+                content.classList.add('hidden');
+            });
+            document.getElementById(`sub-view-${tabName}`).classList.remove('hidden');
+
+            const tabButtons = document.querySelectorAll('#view-vocab nav button');
+            tabButtons.forEach(button => {
+                button.classList.remove('tab-active');
+            });
+            document.getElementById(`tab-${tabName}`).classList.add('tab-active');
+
+            // Khởi tạo lại nếu chuyển sang Flashcard hoặc Dictionary
+            if (tabName === 'flashcard') {
+                initFlashcards();
+            } else if (tabName === 'dictionary') {
+                document.getElementById('search-input').value = '';
+                searchDictionary();
+            }
+        }
+
+
+        // --- Logic Danh Mục HSK (Vocabulary List) ---
+        function renderHSKLists() {
+            const container = document.getElementById('hsk-list-content');
+            let html = '';
+
+            for (const [hskLevel, words] of Object.entries(HSK_VOCABULARY_DATA)) {
+                html += `
+                    <div class="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <h3 class="text-xl font-extrabold text-secondary-color mb-3">${hskLevel} (${words.length} từ)</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                `;
+                words.forEach(word => {
+                    html += `
+                        <div class="bg-white p-3 rounded-md shadow-sm hover:shadow-lg transition duration-300 border-l-4 border-accent-color">
+                            <p class="text-lg font-bold text-gray-800">${word.hanzi}</p>
+                            <p class="text-sm text-gray-600 italic">${word.pinyin}</p>
+                            <p class="text-sm text-primary-color mt-1">${word.meaning}</p>
+                            <span class="text-xs text-gray-400">(${word.type})</span>
+                        </div>
+                    `;
+                });
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        // --- Logic Danh Mục NGỮ PHÁP (Grammar List) ---
+        function renderGrammarLists() {
+            const container = document.getElementById('grammar-content');
+            let html = '';
+
+            for (const [hskLevel, points] of Object.entries(HSK_GRAMMAR_DATA)) {
+                html += `
+                    <div class="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <h3 class="text-xl font-extrabold text-accent-color mb-4">${hskLevel} - Ngữ Pháp Cơ Bản</h3>
+                        <div class="space-y-4">
+                `;
+                points.forEach((point, index) => {
+                    html += `
+                        <div class="bg-white p-4 rounded-md shadow-sm border-l-4 border-primary-color">
+                            <h4 class="text-lg font-bold text-gray-800 mb-1">${index + 1}. ${point.title}</h4>
+                            <p class="text-sm text-gray-600 mb-1">Cấu trúc: <code class="bg-gray-100 p-1 rounded">${point.structure}</code></p>
+                            <p class="text-base font-medium text-secondary-color">Ví dụ: ${point.example}</p>
+                            <p class="text-xs text-gray-500 mt-1">Lưu ý: ${point.notes}</p>
+                        </div>
+                    `;
+                });
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+
+        // --- Logic Flashcard (Không đổi) ---
+        let currentCardIndex = 0;
+        let isCardFlipped = false;
+
+        function initFlashcards() {
+            if (allVocabulary.length === 0) return;
+            allVocabulary.sort(() => Math.random() - 0.5); // Xáo trộn từ vựng
+            currentCardIndex = 0;
+            renderFlashcard(currentCardIndex);
+            updateCardStatus();
+            document.getElementById('flashcard').classList.remove('flipped');
+            isCardFlipped = false;
+        }
+
+        function renderFlashcard(index) {
+            if (allVocabulary.length === 0) return;
+
+            const card = allVocabulary[index];
+            document.getElementById('card-hanzi').textContent = card.hanzi;
+            document.getElementById('card-pinyin').textContent = card.pinyin;
+            document.getElementById('card-meaning').textContent = card.meaning;
+            document.getElementById('card-type').textContent = card.type;
+
+            if (isCardFlipped) {
+                document.getElementById('flashcard').classList.remove('flipped');
+                isCardFlipped = false;
+            }
+        }
+
+        function flipCard() {
+            const flashcard = document.getElementById('flashcard');
+            if (!isCardFlipped) {
+                flashcard.classList.add('flipped');
+            } else {
+                flashcard.classList.remove('flipped');
+            }
+            isCardFlipped = !isCardFlipped;
+        }
+
+        function nextCard() {
+            currentCardIndex = (currentCardIndex + 1) % allVocabulary.length;
+            renderFlashcard(currentCardIndex);
+            updateCardStatus();
+        }
+
+        function prevCard() {
+            currentCardIndex = (currentCardIndex - 1 + allVocabulary.length) % allVocabulary.length;
+            renderFlashcard(currentCardIndex);
+            updateCardStatus();
+        }
+
+        function updateCardStatus() {
+            document.getElementById('card-status').textContent = `Từ ${currentCardIndex + 1} / ${allVocabulary.length}`;
+        }
+
+
+        // --- Logic Từ Điển Tra Cứu (Không đổi) ---
+        function searchDictionary() {
+            const query = document.getElementById('search-input').value.toLowerCase().trim();
+            const resultsContainer = document.getElementById('search-results');
+            const statusElement = document.getElementById('search-status');
+
+            if (query.length < 1) {
+                resultsContainer.innerHTML = '<p class="text-gray-500 text-center mt-8">Bắt đầu nhập để tra cứu từ vựng.</p>';
+                statusElement.textContent = '';
+                return;
+            }
+
+            const filteredWords = allVocabulary.filter(word =>
+                word.hanzi.toLowerCase().includes(query) ||
+                word.pinyin.toLowerCase().includes(query) ||
+                word.meaning.toLowerCase().includes(query)
+            );
+
+            statusElement.textContent = `Tìm thấy ${filteredWords.length} kết quả.`;
+
+            if (filteredWords.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="text-center py-10">
+                        <p class="text-xl text-red-500">Không tìm thấy từ nào phù hợp!</p>
+                        <p class="text-gray-500">Hãy thử từ khóa khác.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">';
+            filteredWords.forEach(word => {
+                let hskLevel = Object.keys(HSK_VOCABULARY_DATA).find(key => HSK_VOCABULARY_DATA[key].includes(word)) || 'Khác';
+                html += `
+                    <div class="bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-200 hover:border-accent-color transition duration-200">
+                        <div class="flex justify-between items-start">
+                            <p class="text-2xl font-extrabold text-gray-800">${word.hanzi}</p>
+                            <span class="bg-primary-color text-white text-xs font-semibold px-2 py-0.5 rounded-full">${hskLevel}</span>
+                        </div>
+                        <p class="text-sm text-gray-600 italic mt-1">/ ${word.pinyin} /</p>
+                        <p class="text-base font-medium text-secondary-color mt-2">${word.meaning}</p>
+                        <span class="text-xs text-gray-400">Loại từ: ${word.type}</span>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            resultsContainer.innerHTML = html;
+        }
+
+
+        // --- Khởi tạo ứng dụng ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderHSKLists(); // Khởi tạo Danh mục HSK lần đầu
+            showView('dashboard'); // Mở giao diện Dashboard mặc định
+        });
+
+    </script>
+</body>
+</html>
